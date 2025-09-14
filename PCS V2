@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NHS PCS Interactive Decision Tree</title>
+    <meta name="description" content="Interactive clinical decision support tool for NHS contraceptive services">
+    <meta name="keywords" content="NHS, PCS, contraception, clinical decision, pharmacy">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #334155;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            color: white;
+            padding: 32px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 26px;
+            margin-bottom: 8px;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+        }
+
+        .header p {
+            opacity: 0.95;
+            font-size: 16px;
+        }
+
+        .content {
+            padding: 32px;
+            background: #ffffff;
+        }
+
+        .step {
+            display: none;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .step.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .step-header {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 28px;
+        }
+
+        .step-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: #0284c7;
+            margin-bottom: 8px;
+            letter-spacing: -0.025em;
+        }
+
+        .step-header p {
+            color: #64748b;
+            font-size: 15px;
+        }
+
+        .question-group {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 24px;
+            margin-bottom: 18px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+        }
+
+        .question-group:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+        }
+
+        .question {
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1e293b;
+            font-size: 16px;
+        }
+
+        .options {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .option {
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .option input[type="radio"] {
+            display: none;
+        }
+
+        .option label {
+            display: block;
+            padding: 14px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 50px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            color: #64748b;
+            background: #ffffff;
+            font-size: 14px;
+        }
+
+        .option input[type="radio"]:checked + label {
+            background: #0ea5e9;
+            color: #ffffff;
+            border-color: #0ea5e9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+        }
+
+        .option input[type="radio"]:checked + label.excluded {
+            background: #ef4444;
+            color: #ffffff;
+            border-color: #ef4444;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .option label:hover {
+            border-color: #0ea5e9;
+            color: #334155;
+            background: #f8fafc;
+        }
+
+        .question-group.excluded {
+            background: #fef2f2;
+            border: 2px solid #ef4444;
+            opacity: 0.8;
+        }
+
+        .question-group.excluded .question::after {
+            content: " ❌ EXCLUDED";
+            color: #ef4444;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .age-input {
+            width: 100px;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-left: 12px;
+            background: #ffffff;
+            color: #334155;
+            transition: all 0.2s ease;
+        }
+
+        .age-input:focus {
+            border-color: #0ea5e9;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+        }
+
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .btn {
+            padding: 14px 32px;
+            border: none;
+            border-radius: 50px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: #0ea5e9;
+            color: #ffffff;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #0284c7;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(14, 165, 233, 0.4);
+        }
+
+        .btn-secondary {
+            background: #64748b;
+            color: #ffffff;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #475569;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 32px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0ea5e9, #0284c7);
+            border-radius: 4px;
+            transition: width 0.6s ease;
+        }
+
+        .result {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 28px;
+            margin-top: 24px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .result.success {
+            background: #f0f9ff;
+            border: 2px solid #0ea5e9;
+            color: #0c4a6e;
+        }
+
+        .result.warning {
+            background: #fffbeb;
+            border: 2px solid #f59e0b;
+            color: #92400e;
+        }
+
+        .result.danger {
+            background: #fef2f2;
+            border: 2px solid #ef4444;
+            color: #991b1b;
+        }
+
+        .result h3 {
+            font-size: 20px;
+            margin-bottom: 16px;
+            color: #0284c7;
+            font-weight: 700;
+        }
+
+        .section-exclusions {
+            background: #fef2f2;
+            border: 2px solid #ef4444;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 25px;
+        }
+
+        .section-coc {
+            background: #fffbeb;
+            border: 2px solid #f59e0b;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 25px;
+        }
+
+        .section-pop {
+            background: #f0f9ff;
+            border: 2px solid #0ea5e9;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .section-exclusions .section-title {
+            color: #dc2626;
+        }
+
+        .section-coc .section-title {
+            color: #d97706;
+        }
+
+        .section-pop .section-title {
+            color: #0284c7;
+        }
+
+        .section-description {
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .section-exclusions .section-description {
+            color: #991b1b;
+        }
+
+        .section-coc .section-description {
+            color: #92400e;
+        }
+
+        .section-pop .section-description {
+            color: #0c4a6e;
+        }
+
+        .section-coc.excluded {
+            background: #fef2f2 !important;
+            border: 2px solid #ef4444 !important;
+            opacity: 0.8;
+        }
+
+        .section-coc.excluded .section-title::after {
+            content: " ❌ EXCLUDED";
+            color: #ef4444;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .section-pop.excluded {
+            background: #fef2f2 !important;
+            border: 2px solid #ef4444 !important;
+            opacity: 0.8;
+        }
+
+        .section-pop.excluded .section-title::after {
+            content: " ❌ EXCLUDED";
+            color: #ef4444;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .contraindicated-banner {
+            background: #fef2f2;
+            border: 1px solid #ef4444;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+            color: #dc2626;
+            font-weight: 600;
+            animation: pulseAlert 2s ease-in-out;
+        }
+
+        @keyframes pulseAlert {
+            0% { 
+                background: #fef2f2; 
+                border-color: #ef4444;
+                transform: scale(1);
+            }
+            50% { 
+                background: #fee2e2; 
+                border-color: #dc2626;
+                transform: scale(1.02);
+            }
+            100% { 
+                background: #fef2f2; 
+                border-color: #ef4444;
+                transform: scale(1);
+            }
+        }
+
+        .clinical-data {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .clinical-data input {
+            margin: 8px 12px 8px 0;
+            padding: 10px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            width: 90px;
+            background: #ffffff;
+            color: #334155;
+            transition: all 0.2s ease;
+        }
+
+        .clinical-data input:focus {
+            border-color: #0ea5e9;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+        }
+
+        .formulary-info {
+            background: #f0f9ff;
+            border: 1px solid #0ea5e9;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            color: #0c4a6e;
+        }
+
+        .formulary-info h4, .formulary-info h3 {
+            color: #0284c7;
+            margin-bottom: 12px;
+        }
+
+        .contraindication-list {
+            background: #fef2f2;
+            border: 1px solid #ef4444;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            color: #991b1b;
+        }
+
+        .contraindication-list h4 {
+            color: #dc2626;
+            margin-bottom: 12px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+                border-radius: 12px;
+            }
+            
+            .header {
+                padding: 24px;
+            }
+            
+            .content {
+                padding: 24px;
+            }
+            
+            .options {
+                flex-direction: column;
+            }
+            
+            .navigation {
+                flex-direction: column;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>NHS PCS Interactive Decision Tree</h1>
+            <p>Smart clinical screening for oral contraceptive services</p>
+        </div>
+
+        <div class="content">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+
+            <!-- Step 1: Access Eligibility -->
+            <div class="step active" id="step1">
+                <div class="step-header">
+                    <div class="step-title">Step 1: Access Eligibility</div>
+                    <p>Determine if patient is eligible for NHS contraception service</p>
+                </div>
+
+                <div class="question-group">
+                    <div class="question">Patient's age:</div>
+                    <input type="number" id="patientAge" class="age-input" placeholder="Age" min="12" max="60">
+                </div>
+
+                <div class="question-group">
+                    <div class="question">Is patient Fraser competent (if under 16)?</div>
+                    <div class="options">
+                        <div class="option">
+                            <input type="radio" id="fraser_yes" name="fraser" value="yes">
+                            <label for="fraser_yes">Yes</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="fraser_no" name="fraser" value="no">
+                            <label for="fraser_no">No</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="fraser_na" name="fraser" value="na">
+                            <label for="fraser_na">N/A (16+)</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="question-group">
+                    <div class="question">Does patient have capacity to consent (if 16+)?</div>
+                    <div class="options">
+                        <div class="option">
+                            <input type="radio" id="capacity_yes" name="capacity" value="yes">
+                            <label for="capacity_yes">Yes</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="capacity_no" name="capacity" value="no">
+                            <label for="capacity_no">No</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="capacity_na" name="capacity" value="na">
+                            <label for="capacity_na">N/A (Under 16)</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Clinical History -->
+            <div class="step" id="step2">
+                <div class="step-header">
+                    <div class="step-title">Step 2: Smart Clinical Screening</div>
+                    <p>Intelligent assessment with early exit points</p>
+                </div>
+
+                <!-- Service Exclusions -->
+                <div class="section-exclusions">
+                    <div class="section-title">Complete Service Exclusions</div>
+                    <div class="section-description">Any "Yes" answer excludes from all contraceptive services</div>
+                    <div id="serviceExclusionQuestions"></div>
+                </div>
+
+                <!-- COC Section -->
+                <div id="cocSection" class="section-coc" style="display: none;">
+                    <div class="section-title">COC (Combined Pill) Assessment</div>
+                    <div class="section-description">Any "Yes" answer excludes COC, assessment continues for POP</div>
+                    <div id="cocQuestions"></div>
+                    <div id="cocExcluded" class="contraindicated-banner" style="display: none;">
+                        ❌ COC CONTRAINDICATED - Continuing with POP assessment
+                    </div>
+                </div>
+
+                <!-- POP Section -->
+                <div id="popSection" class="section-pop" style="display: none;">
+                    <div class="section-title">POP (Mini Pill) Assessment</div>
+                    <div class="section-description">Any "Yes" answer excludes POP</div>
+                    <div id="popQuestions"></div>
+                    <div id="popExcluded" class="contraindicated-banner" style="display: none;">
+                        ❌ POP CONTRAINDICATED
+                    </div>
+                </div>
+
+                <div id="assessmentComplete" style="display: none;">
+                    <div class="result success">
+                        <h3>✅ Clinical Screening Complete</h3>
+                        <p>Ready to proceed to clinical measurements (if required)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Clinical Examination -->
+            <div class="step" id="step3">
+                <div class="step-header">
+                    <div class="step-title">Step 3: Clinical Measurements</div>
+                    <p>Required only if COC potentially suitable</p>
+                </div>
+
+                <div class="clinical-data">
+                    <div class="question">Blood Pressure (mmHg):</div>
+                    <input type="number" id="systolic" placeholder="Systolic" min="80" max="200">
+                    <span>/</span>
+                    <input type="number" id="diastolic" placeholder="Diastolic" min="50" max="120">
+
+                    <div class="question" style="margin-top: 20px;">BMI (kg/m²):</div>
+                    <input type="number" id="bmi" placeholder="BMI" min="15" max="50" step="0.1">
+                    
+                    <div style="margin-top: 20px; text-align: center;">
+                        <button type="button" class="btn btn-secondary" id="skipMeasurements">
+                            Skip Measurements (If COC not suitable)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Results -->
+            <div class="step" id="step4">
+                <div class="step-header">
+                    <div class="step-title">Step 4: Assessment Results</div>
+                    <p>Clinical decision and recommendations</p>
+                </div>
+
+                <div id="results"></div>
+            </div>
+
+            <div class="navigation">
+                <button class="btn btn-secondary" id="prevBtn">Previous</button>
+                <button class="btn btn-primary" id="nextBtn">Next</button>
+                <button class="btn btn-primary" id="restartBtn" style="display: none;">Start New Assessment</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        const totalSteps = 4;
+        let assessmentData = {};
+
+        const serviceExclusionQuestions = [
+            { id: 'pregnant', text: 'Are you pregnant?' },
+            { id: 'breast_cancer_current', text: 'Do you have current breast cancer?' },
+            { id: 'liver_tumour', text: 'Do you have malignant or benign liver tumour?' },
+            { id: 'cirrhosis', text: 'Do you have severe (decompensated) cirrhosis?' },
+            { id: 'porphyria', text: 'Do you have acute porphyria?' }
+        ];
+
+        const cocQuestions = [
+            { id: 'vte', text: 'Do you have current or past VTE/DVT/PE?' },
+            { id: 'family_vte', text: 'Do you have a 1st-degree relative with VTE <45 years?' },
+            { id: 'thrombogenic', text: 'Do you have a known thrombogenic mutation?' },
+            { id: 'hypertension', text: 'Do you have hypertension ≥140/90 mmHg or are you on treatment?' },
+            { id: 'smoker_35', text: 'Are you a smoker or vaper (e-cigarettes) ≥35 years?' },
+            { id: 'migraine_aura', text: 'Do you suffer from migraine with aura?' },
+            { id: 'bmi_35', text: 'Is your BMI ≥35 kg/m²?' },
+            { id: 'diabetes_comp', text: 'Do you have diabetes with complications?' },
+            { id: 'cardiovascular', text: 'Do you have IHD, stroke, TIA, AF, or cardiomyopathy?' },
+            { id: 'breast_symptoms', text: 'Do you have undiagnosed breast symptoms?' },
+            { id: 'hepatitis', text: 'Do you have acute viral hepatitis?' },
+            { id: 'gallbladder', text: 'Do you have gallbladder disease with symptoms?' },
+            { id: 'surgery', text: 'Do you have planned major surgery or prolonged immobility?' },
+            { id: 'lupus', text: 'Do you have antiphospholipid antibodies or lupus?' },
+            { id: 'renal', text: 'Do you have severe renal impairment?' },
+            { id: 'postpartum_21', text: 'Are you postpartum <21 days?' },
+            { id: 'postpartum_bf', text: 'Are you postpartum <6 weeks & breastfeeding?' }
+        ];
+
+        const popQuestions = [
+            { id: 'enzyme_inducers', text: 'Are you on enzyme-inducers now or within 4 weeks?' },
+            { id: 'vaginal_bleeding', text: 'Do you have unexplained vaginal bleeding?' },
+            { id: 'breast_cancer_past', text: 'Do you have past breast cancer?' }
+        ];
+
+        function updateProgress() {
+            const progress = (currentStep / totalSteps) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+
+        function generateQuestion(question, onChangeHandler, index) {
+            return `
+                <div class="question-group" data-question-id="${question.id}" data-question-index="${index}">
+                    <div class="question">${question.text}</div>
+                    <div class="options">
+                        <div class="option">
+                            <input type="radio" id="${question.id}_yes" name="${question.id}" value="yes" onchange="${onChangeHandler}('${question.id}', this.value, ${index})">
+                            <label for="${question.id}_yes">Yes</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="${question.id}_no" name="${question.id}" value="no" onchange="${onChangeHandler}('${question.id}', this.value, ${index})">
+                            <label for="${question.id}_no">No</label>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateScreeningQuestions() {
+            // Service Exclusions
+            const serviceContainer = document.getElementById('serviceExclusionQuestions');
+            serviceContainer.innerHTML = serviceExclusionQuestions
+                .map((q, index) => generateQuestion(q, 'handleServiceExclusion', index))
+                .join('');
+
+            // COC Questions
+            const cocContainer = document.getElementById('cocQuestions');
+            cocContainer.innerHTML = cocQuestions
+                .map((q, index) => generateQuestion(q, 'handleCOCQuestion', index))
+                .join('');
+
+            // POP Questions
+            const popContainer = document.getElementById('popQuestions');
+            popContainer.innerHTML = popQuestions
+                .map((q, index) => generateQuestion(q, 'handlePOPQuestion', index))
+                .join('');
+        }
+
+        function handleServiceExclusion(questionId, value, questionIndex) {
+            assessmentData[questionId] = value;
+            
+            if (value === 'yes') {
+                // Mark question as excluded visually
+                markQuestionAsExcluded(questionId, 'service');
+                showServiceExclusionBanner(questionId);
+                assessmentData.serviceExcluded = true;
+                
+                // Hide all questions after this one
+                const container = document.getElementById('serviceExclusionQuestions');
+                const allQuestions = container.querySelectorAll('.question-group');
+                
+                for (let i = questionIndex + 1; i < allQuestions.length; i++) {
+                    allQuestions[i].style.display = 'none';
+                    allQuestions[i].classList.add('auto-hidden');
+                }
+                
+                // Auto-jump to results after brief delay
+                setTimeout(() => showServiceExcludedResult(), 1500);
+            } else {
+                removeQuestionExclusion(questionId);
+                
+                // Show all previously hidden questions in this section
+                const container = document.getElementById('serviceExclusionQuestions');
+                const hiddenQuestions = container.querySelectorAll('.question-group.auto-hidden');
+                hiddenQuestions.forEach(q => {
+                    q.style.display = 'block';
+                    q.classList.remove('auto-hidden');
+                });
+                
+                checkServiceExclusionComplete();
+            }
+        }
+
+        function handleCOCQuestion(questionId, value, questionIndex) {
+            assessmentData[questionId] = value;
+            
+            if (value === 'yes') {
+                // Mark question as excluded visually
+                markQuestionAsExcluded(questionId, 'coc');
+                
+                // Mark entire COC section as excluded
+                const cocSection = document.getElementById('cocSection');
+                if (cocSection) {
+                    cocSection.classList.add('excluded');
+                }
+                
+                showCOCExclusionBanner(questionId);
+                assessmentData.cocExcluded = true;
+                
+                // Hide all questions after this one
+                const container = document.getElementById('cocQuestions');
+                const allQuestions = container.querySelectorAll('.question-group');
+                
+                // Hide remaining questions immediately
+                for (let i = questionIndex + 1; i < allQuestions.length; i++) {
+                    if (allQuestions[i]) {
+                        allQuestions[i].style.display = 'none';
+                        allQuestions[i].classList.add('auto-hidden');
+                    }
+                }
+                
+                // Auto-jump to POP section after brief delay
+                setTimeout(() => showPOPSection(), 1000);
+            } else {
+                removeQuestionExclusion(questionId);
+                
+                // Remove exclusion from entire COC section
+                const cocSection = document.getElementById('cocSection');
+                if (cocSection) {
+                    cocSection.classList.remove('excluded');
+                }
+                
+                // Show all previously hidden questions in this section
+                const container = document.getElementById('cocQuestions');
+                if (container) {
+                    const hiddenQuestions = container.querySelectorAll('.question-group.auto-hidden');
+                    hiddenQuestions.forEach(q => {
+                        q.style.display = 'block';
+                        q.classList.remove('auto-hidden');
+                    });
+                }
+                
+                checkCOCComplete();
+            }
+        }
+
+        function handlePOPQuestion(questionId, value, questionIndex) {
+            assessmentData[questionId] = value;
+            
+            if (value === 'yes') {
+                // Mark question as excluded visually
+                markQuestionAsExcluded(questionId, 'pop');
+                
+                // Mark entire POP section as excluded
+                const popSection = document.getElementById('popSection');
+                if (popSection) {
+                    popSection.classList.add('excluded');
+                }
+                
+                showPOPExclusionBanner(questionId);
+                assessmentData.popExcluded = true;
+                
+                // Hide all questions after this one
+                const container = document.getElementById('popQuestions');
+                const allQuestions = container.querySelectorAll('.question-group');
+                
+                // Hide remaining questions immediately
+                for (let i = questionIndex + 1; i < allQuestions.length; i++) {
+                    if (allQuestions[i]) {
+                        allQuestions[i].style.display = 'none';
+                        allQuestions[i].classList.add('auto-hidden');
+                    }
+                }
+                
+                // Auto-jump to assessment complete after brief delay
+                setTimeout(() => showAssessmentComplete(), 1000);
+            } else {
+                removeQuestionExclusion(questionId);
+                
+                // Remove exclusion from entire POP section
+                const popSection = document.getElementById('popSection');
+                if (popSection) {
+                    popSection.classList.remove('excluded');
+                }
+                
+                // Show all previously hidden questions in this section
+                const container = document.getElementById('popQuestions');
+                if (container) {
+                    const hiddenQuestions = container.querySelectorAll('.question-group.auto-hidden');
+                    hiddenQuestions.forEach(q => {
+                        q.style.display = 'block';
+                        q.classList.remove('auto-hidden');
+                    });
+                }
+                
+                checkPOPComplete();
+            }
+        }
+
+        function markQuestionAsExcluded(questionId, type) {
+            // Find the question group and mark it as excluded
+            const questionElement = document.getElementById(questionId + '_yes').closest('.question-group');
+            if (questionElement) {
+                questionElement.classList.add('excluded');
+            }
+            
+            // Mark the "Yes" button as excluded (red)
+            const yesLabel = document.querySelector(`label[for="${questionId}_yes"]`);
+            if (yesLabel) {
+                yesLabel.classList.add('excluded');
+            }
+        }
+
+        function removeQuestionExclusion(questionId) {
+            // Remove exclusion styling
+            const questionElement = document.getElementById(questionId + '_yes').closest('.question-group');
+            if (questionElement) {
+                questionElement.classList.remove('excluded');
+            }
+            
+            // Remove excluded class from label
+            const yesLabel = document.querySelector(`label[for="${questionId}_yes"]`);
+            if (yesLabel) {
+                yesLabel.classList.remove('excluded');
+            }
+        }
+
+        function showServiceExclusionBanner(questionId) {
+            const question = serviceExclusionQuestions.find(q => q.id === questionId);
+            const banner = document.createElement('div');
+            banner.className = 'contraindicated-banner';
+            banner.innerHTML = `🚫 SERVICE EXCLUDED: ${question.text.replace('Do you have ', '').replace('Are you ', '').replace('?', '')} - Assessment ending`;
+            
+            document.getElementById('serviceExclusionQuestions').appendChild(banner);
+        }
+
+        function showCOCExclusionBanner(questionId) {
+            const question = cocQuestions.find(q => q.id === questionId);
+            const existingBanner = document.getElementById('cocExcluded');
+            existingBanner.style.display = 'block';
+            existingBanner.innerHTML = `❌ COC CONTRAINDICATED: ${question.text.replace('Do you have ', '').replace('Are you ', '').replace('?', '')} - Continuing with POP assessment`;
+        }
+
+        function showPOPExclusionBanner(questionId) {
+            const question = popQuestions.find(q => q.id === questionId);
+            const existingBanner = document.getElementById('popExcluded');
+            existingBanner.style.display = 'block';
+            existingBanner.innerHTML = `❌ POP CONTRAINDICATED: ${question.text.replace('Do you have ', '').replace('Are you ', '').replace('?', '')} - Assessment complete`;
+        }
+
+        function checkServiceExclusionComplete() {
+            const allAnswered = serviceExclusionQuestions.every(q => 
+                assessmentData[q.id] && assessmentData[q.id] === 'no'
+            );
+            
+            if (allAnswered) {
+                showCOCSection();
+            }
+        }
+
+        function checkCOCComplete() {
+            const allAnswered = cocQuestions.every(q => 
+                assessmentData[q.id] === 'no'
+            );
+            
+            if (allAnswered) {
+                assessmentData.cocSuitable = true;
+                showPOPSection();
+            }
+        }
+
+        function checkPOPComplete() {
+            const allAnswered = popQuestions.every(q => 
+                assessmentData[q.id] === 'no'
+            );
+            
+            if (allAnswered) {
+                assessmentData.popSuitable = true;
+                showAssessmentComplete();
+            }
+        }
+
+        function showCOCSection() {
+            document.getElementById('cocSection').style.display = 'block';
+            // Ensure all COC questions are visible when section first shows
+            const container = document.getElementById('cocQuestions');
+            const allQuestions = container.querySelectorAll('.question-group');
+            allQuestions.forEach(q => {
+                q.style.display = 'block';
+                q.classList.remove('auto-hidden');
+            });
+        }
+
+        function showPOPSection() {
+            document.getElementById('popSection').style.display = 'block';
+            // Ensure all POP questions are visible when section first shows
+            const container = document.getElementById('popQuestions');
+            const allQuestions = container.querySelectorAll('.question-group');
+            allQuestions.forEach(q => {
+                q.style.display = 'block';
+                q.classList.remove('auto-hidden');
+            });
+        }
+
+        function showAssessmentComplete() {
+            document.getElementById('assessmentComplete').style.display = 'block';
+        }
+
+        function showServiceExcludedResult() {
+            currentStep = 4;
+            document.getElementById('step2').classList.remove('active');
+            document.getElementById('step4').classList.add('active');
+            updateProgress();
+            updateNavigationButtons();
+            displayResults();
+        }
+
+        function validateStep(step) {
+            if (step === 1) {
+                const age = document.getElementById('patientAge').value;
+                const fraser = document.querySelector('input[name="fraser"]:checked');
+                const capacity = document.querySelector('input[name="capacity"]:checked');
+                
+                if (!age || age < 12 || age > 60) {
+                    alert('Please enter a valid age between 12 and 60');
+                    return false;
+                }
+                if (!fraser) {
+                    alert('Please answer the Fraser competence question');
+                    return false;
+                }
+                if (!capacity) {
+                    alert('Please answer the capacity to consent question');
+                    return false;
+                }
+                
+                assessmentData.age = parseInt(age);
+                assessmentData.fraser = fraser.value;
+                assessmentData.capacity = capacity.value;
+                return true;
+            }
+            
+            if (step === 2) {
+                if (assessmentData.serviceExcluded) {
+                    return true;
+                }
+                
+                if ((assessmentData.cocSuitable || assessmentData.cocExcluded) && 
+                    (assessmentData.popSuitable || assessmentData.popExcluded)) {
+                    return true;
+                }
+                
+                const serviceAnswered = serviceExclusionQuestions.every(q => assessmentData[q.id]);
+                if (!serviceAnswered) {
+                    alert('Please complete all service exclusion questions');
+                    return false;
+                }
+                
+                return false;
+            }
+            
+            if (step === 3) {
+                if (assessmentData.measurementsSkipped || assessmentData.serviceExcluded || !assessmentData.cocSuitable) {
+                    return true;
+                }
+                
+                const systolic = document.getElementById('systolic').value;
+                const diastolic = document.getElementById('diastolic').value;
+                const bmi = document.getElementById('bmi').value;
+                
+                if (!systolic || !diastolic || !bmi) {
+                    alert('Please enter measurements or skip if not required');
+                    return false;
+                }
+                
+                assessmentData.bp = { systolic: parseInt(systolic), diastolic: parseInt(diastolic) };
+                assessmentData.bmi = parseFloat(bmi);
+                return true;
+            }
+            
+            return true;
+        }
+
+        function nextStep() {
+            if (!validateStep(currentStep)) {
+                return;
+            }
+            
+            if (currentStep === 2 && (assessmentData.serviceExcluded || !assessmentData.cocSuitable)) {
+                currentStep = 4;
+            } else if (currentStep < totalSteps) {
+                currentStep++;
+            }
+            
+            document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
+            document.getElementById('step' + currentStep).classList.add('active');
+            
+            updateProgress();
+            updateNavigationButtons();
+            
+            if (currentStep === 4) {
+                displayResults();
+            }
+        }
+
+        function previousStep() {
+            if (currentStep > 1) {
+                if (currentStep === 4 && (assessmentData.serviceExcluded || !assessmentData.cocSuitable)) {
+                    currentStep = 2;
+                } else {
+                    currentStep--;
+                }
+                
+                document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
+                document.getElementById('step' + currentStep).classList.add('active');
+                
+                updateProgress();
+                updateNavigationButtons();
+            }
+        }
+
+        function updateNavigationButtons() {
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const restartBtn = document.getElementById('restartBtn');
+            
+            prevBtn.style.display = currentStep === 1 ? 'none' : 'block';
+            
+            if (currentStep === totalSteps) {
+                nextBtn.style.display = 'none';
+                restartBtn.style.display = 'block';
+            } else {
+                nextBtn.style.display = 'block';
+                restartBtn.style.display = 'none';
+            }
+        }
+
+        function skipClinicalMeasurements() {
+            assessmentData.measurementsSkipped = true;
+            const skipBtn = document.getElementById('skipMeasurements');
+            skipBtn.textContent = 'Measurements Skipped ✓';
+            skipBtn.style.background = '#10b981';
+            skipBtn.disabled = true;
+        }
+
+        function assessContraception() {
+            if (assessmentData.age < 12 || assessmentData.age > 55) {
+                return {
+                    recommendation: 'NOT ELIGIBLE - Age outside service parameters',
+                    type: 'danger'
+                };
+            }
+
+            if (assessmentData.age < 16 && assessmentData.fraser === 'no') {
+                return {
+                    recommendation: 'NOT ELIGIBLE - Not Fraser competent',
+                    type: 'danger'
+                };
+            }
+
+            if (assessmentData.age >= 16 && assessmentData.capacity === 'no') {
+                return {
+                    recommendation: 'NOT ELIGIBLE - Lacks capacity to consent',
+                    type: 'danger'
+                };
+            }
+
+            if (assessmentData.serviceExcluded) {
+                const exclusionReasons = [];
+                serviceExclusionQuestions.forEach(q => {
+                    if (assessmentData[q.id] === 'yes') {
+                        exclusionReasons.push(q.text.replace('Do you have ', '').replace('Are you ', '').replace('?', ''));
+                    }
+                });
+                
+                return {
+                    recommendation: 'NOT ELIGIBLE FOR SERVICE',
+                    details: 'Complete exclusion from contraceptive services',
+                    contraindications: exclusionReasons,
+                    type: 'danger'
+                };
+            }
+
+            let cocSuitable = assessmentData.cocSuitable;
+            let popSuitable = assessmentData.popSuitable;
+            let cocContraindications = [];
+            let popContraindications = [];
+
+            // Check additional COC contraindications from measurements
+            if (assessmentData.age >= 50) {
+                cocSuitable = false;
+                cocContraindications.push('Age ≥50 years');
+            }
+
+            if (assessmentData.bp) {
+                if (assessmentData.bp.systolic >= 140 || assessmentData.bp.diastolic >= 90) {
+                    cocSuitable = false;
+                    cocContraindications.push('Hypertension ≥140/90 mmHg');
+                }
+            }
+
+            if (assessmentData.bmi && assessmentData.bmi >= 35) {
+                cocSuitable = false;
+                cocContraindications.push('BMI ≥35 kg/m²');
+            }
+
+            // Add contraindications from questions
+            if (assessmentData.cocExcluded) {
+                cocQuestions.forEach(q => {
+                    if (assessmentData[q.id] === 'yes') {
+                        cocContraindications.push(q.text.replace('Do you have ', '').replace('Are you ', '').replace('?', ''));
+                    }
+                });
+            }
+
+            if (assessmentData.popExcluded) {
+                popQuestions.forEach(q => {
+                    if (assessmentData[q.id] === 'yes') {
+                        popContraindications.push(q.text.replace('Do you have ', '').replace('Are you ', '').replace('?', ''));
+                    }
+                });
+            }
+
+            // Determine final recommendation
+            if (cocSuitable && popSuitable) {
+                return {
+                    recommendation: 'BOTH COC AND POP SUITABLE',
+                    details: 'Patient can choose between combined oral contraceptive or progestogen-only pill.',
+                    formulary: 'COC: Microgynon 30, Levest, Rigevidon<br>POP: Desogestrel 75μg (Cerazette)',
+                    type: 'success'
+                };
+            } else if (!cocSuitable && popSuitable) {
+                return {
+                    recommendation: 'POP ONLY SUITABLE',
+                    details: 'Combined oral contraceptive is contraindicated. Progestogen-only pill is appropriate.',
+                    formulary: 'POP: Desogestrel 75μg (Cerazette, Cerelle)',
+                    contraindications: cocContraindications,
+                    type: 'warning'
+                };
+            } else if (cocSuitable && !popSuitable) {
+                return {
+                    recommendation: 'COC ONLY SUITABLE',
+                    details: 'Progestogen-only pill is contraindicated. Combined oral contraceptive is appropriate.',
+                    formulary: 'COC: Microgynon 30, Levest, Rigevidon',
+                    contraindications: popContraindications,
+                    type: 'warning'
+                };
+            } else {
+                return {
+                    recommendation: 'NEITHER COC NOR POP SUITABLE',
+                    details: 'Both contraceptives are contraindicated. Consider alternative contraceptive methods.',
+                    contraindications: [...cocContraindications, ...popContraindications],
+                    type: 'danger'
+                };
+            }
+        }
+
+        function displayResults() {
+            const assessment = assessContraception();
+            const resultsContainer = document.getElementById('results');
+            
+            let html = `<div class="result ${assessment.type}">
+                <h3>${assessment.recommendation}</h3>
+                <p>${assessment.details || ''}</p>`;
+                
+            if (assessment.formulary) {
+                html += `<div class="formulary-info"><h4>Recommended Options:</h4><p>${assessment.formulary}</p></div>`;
+            }
+            
+            if (assessment.contraindications && assessment.contraindications.length > 0) {
+                html += '<div class="contraindication-list"><h4>Contraindications:</h4><ul>';
+                assessment.contraindications.forEach(ci => {
+                    html += `<li>${ci}</li>`;
+                });
+                html += '</ul></div>';
+            }
+            
+            // Add Pharmacist Quick Points section
+            html += `
+                <div class="formulary-info" style="margin-top: 25px;">
+                    <h3 style="color: #0284c7; margin-bottom: 20px;">📋 Pharmacist Quick Points - Shared Decision-Making</h3>
+                    <p style="margin-bottom: 15px;"><em>When a patient is eligible for both COC and POP, or is choosing between methods:</em></p>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <strong>✅ Effectiveness</strong><br>
+                        • Both COC and POP are >99% effective with perfect use<br>
+                        • With typical use, about 91% effective (missed pills are the main issue)<br>
+                        • LARC methods (implant, IUD) are even more effective — mention as gold standard
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <strong>✅ How to Take</strong><br>
+                        • <strong>COC</strong>: one pill daily for 21 days, then 7 days off (or 21+7 with placebos)<br>
+                        • <strong>POP (desogestrel)</strong>: one pill daily, no break. Must be taken within a <strong>12-hour window</strong><br>
+                        • <strong>Traditional POPs</strong> (norethisterone, levonorgestrel): 3-hour window only
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <strong>✅ Cycle & Bleeding</strong><br>
+                        • <strong>COC</strong>: more predictable cycles, lighter and less painful periods, can improve acne/PMS<br>
+                        • <strong>POP</strong>: bleeding may be irregular, lighter, or absent. Some women find this inconvenient
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <strong>✅ Side Effects</strong><br>
+                        • <strong>COC (oestrogen-related risks)</strong>: headaches, nausea, breast tenderness, mood changes, very small risk of blood clots, stroke, or heart attack<br>
+                        • <strong>POP</strong>: acne, breast tenderness, irregular bleeding, mood changes; <strong>no increased VTE risk</strong>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <strong>✅ When it Starts Working</strong><br>
+                        • If started day 1–5 of cycle → effective immediately<br>
+                        • If started later → extra contraception needed (48h for POP, 7 days for COC)<br>
+                        • If switching → follow FSRH "quick start" rules
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <strong>✅ Missed Pill Rules</strong><br>
+                        • <strong>COC</strong>: If ≥24 hours late → take missed pill ASAP + use condoms for 7 days<br>
+                        • <strong>POP (desogestrel)</strong>: If >12 hours late → take ASAP + condoms for 48h<br>
+                        • <strong>Traditional POPs</strong>: If >3 hours late → same rule (condoms for 48h)
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <strong>✅ Non-Contraceptive Benefits</strong><br>
+                        • <strong>COC</strong>: acne control, lighter/regular periods, PMS relief, protection against endometrial/ovarian cancer<br>
+                        • <strong>POP</strong>: suitable for women who cannot take oestrogen, safe while breastfeeding, safer for smokers/older women
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <strong>✅ STI Protection</strong><br>
+                        • Neither COC nor POP protect against STIs<br>
+                        • Condoms still needed for STI prevention
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <strong>✅ When to Seek Help</strong><br>
+                        • <strong>COC – "ACHES" red flags</strong>:<br>
+                        &nbsp;&nbsp;◦ <strong>A</strong>bdominal pain (severe)<br>
+                        &nbsp;&nbsp;◦ <strong>C</strong>hest pain/shortness of breath<br>
+                        &nbsp;&nbsp;◦ <strong>H</strong>eadaches (sudden, severe, migraines with aura)<br>
+                        &nbsp;&nbsp;◦ <strong>E</strong>ye problems (vision changes)<br>
+                        &nbsp;&nbsp;◦ <strong>S</strong>evere leg pain/swelling<br>
+                        • <strong>POP</strong>: new breast symptoms, severe liver problems, very heavy or unusual bleeding
+                    </div>
+                    
+                    <div style="margin-bottom: 15px; border-top: 2px solid #0284c7; padding-top: 20px;">
+                        <strong>🗣️ Patient Choice Discussion Prompts</strong><br>
+                        <em>Use these conversation starters to explore patient preferences:</em>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <strong>✅ Exploring Lifestyle Factors</strong><br>
+                        • <em>"Tell me about your daily routine - are you good at remembering things at the same time each day?"</em><br>
+                        • <em>"Do you work shifts, travel frequently, or have an irregular schedule?"</em><br>
+                        • <em>"How important is it to you to have regular, predictable periods?"</em><br>
+                        • <em>"Some women prefer lighter periods, others don't mind if they stop completely - what's your preference?"</em>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <strong>✅ Understanding Concerns</strong><br>
+                        • <em>"What worries you most about taking hormones?"</em><br>
+                        • <em>"Have you or anyone you know had problems with contraception before?"</em><br>
+                        • <em>"What have you heard about the pill that concerns you?"</em><br>
+                        • <em>"Are there any side effects you're particularly worried about?"</em>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <strong>✅ Exploring Priorities</strong><br>
+                        • <em>"What's most important to you - convenience, effectiveness, or avoiding side effects?"</em><br>
+                        • <em>"Would you prefer something you take daily, or are you interested in longer-acting options?"</em><br>
+                        • <em>"How would you feel about irregular bleeding in exchange for not having to remember daily pills?"</em><br>
+                        • <em>"Is it important that your partner doesn't need to be involved in contraception?"</em>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <strong>✅ Risk Communication</strong><br>
+                        • <em>"The blood clot risk is very small - about 5-7 women per 10,000 per year, compared to 2 per 10,000 with no pill"</em><br>
+                        • <em>"To put this in perspective, pregnancy carries a higher blood clot risk than the pill"</em><br>
+                        • <em>"Your personal risk might be different based on your health - shall we discuss your individual factors?"</em><br>
+                        • <em>"What does 'low risk' mean to you? Some people want to avoid any extra risk, others are comfortable with small increases"</em>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <strong>✅ Supporting Decision-Making</strong><br>
+                        • <em>"There's no rush to decide today - would you like time to think about it?"</em><br>
+                        • <em>"What other information would help you make this decision?"</em><br>
+                        • <em>"Would you like to discuss this with your partner/family before deciding?"</em><br>
+                        • <em>"We can always try one method and change if it doesn't suit you"</em>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <strong>✅ When Both Methods Suitable</strong><br>
+                        • <em>"You're suitable for both options - let's talk about which might work better for your lifestyle"</em><br>
+                        • <em>"The combined pill gives you more control over periods, while the mini-pill has fewer restrictions"</em><br>
+                        • <em>"Which appeals to you more - having a break each month, or taking a pill continuously?"</em><br>
+                        • <em>"Many women start with the combined pill, but there's no 'right' choice - it's about what works for you"</em>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <strong>✅ Alternative Options Discussion</strong><br>
+                        • <em>"While pills are convenient, there are other very effective options like implants or coils - would you like information about those?"</em><br>
+                        • <em>"If you're looking for the most effective option with least daily involvement, I'd recommend speaking to the family planning clinic about long-acting methods"</em><br>
+                        • <em>"Some women prefer methods they can control themselves, others prefer 'fit and forget' - what appeals to you?"</em>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <strong>✅ Future Supplies</strong><br>
+                        • Initial: up to 3 months<br>
+                        • Ongoing: up to 12 months if still eligible<br>
+                        • Return sooner if: adverse effects, new medical diagnosis, new medicines
+                    </div>
+                </div>
+            `;
+            
+            html += '</div>';
+            resultsContainer.innerHTML = html;
+        }
+
+        function restartAssessment() {
+            currentStep = 1;
+            assessmentData = {};
+            
+            document.querySelectorAll('input').forEach(input => {
+                if (input.type === 'radio') {
+                    input.checked = false;
+                } else {
+                    input.value = '';
+                }
+            });
+            
+            // Reset all sections and show all questions
+            document.getElementById('cocSection').style.display = 'none';
+            document.getElementById('popSection').style.display = 'none';
+            document.getElementById('assessmentComplete').style.display = 'none';
+            document.getElementById('cocExcluded').style.display = 'none';
+            document.getElementById('popExcluded').style.display = 'none';
+            
+            // Remove section exclusion styling
+            document.getElementById('cocSection').classList.remove('excluded');
+            document.getElementById('popSection').classList.remove('excluded');
+            
+            // Show all previously hidden questions
+            document.querySelectorAll('.question-group.auto-hidden').forEach(questionGroup => {
+                questionGroup.style.display = 'block';
+                questionGroup.classList.remove('auto-hidden');
+            });
+            
+            // Remove all exclusion styling
+            document.querySelectorAll('.question-group.excluded').forEach(questionGroup => {
+                questionGroup.classList.remove('excluded');
+            });
+            
+            document.querySelectorAll('label.excluded').forEach(label => {
+                label.classList.remove('excluded');
+            });
+            
+            const skipBtn = document.getElementById('skipMeasurements');
+            skipBtn.textContent = 'Skip Measurements (If COC not suitable)';
+            skipBtn.style.background = '#64748b';
+            skipBtn.disabled = false;
+            
+            document.querySelectorAll('.step').forEach(step => {
+                step.classList.remove('active');
+            });
+            document.getElementById('step1').classList.add('active');
+            
+            updateProgress();
+            updateNavigationButtons();
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            generateScreeningQuestions();
+            updateProgress();
+            updateNavigationButtons();
+            
+            document.getElementById('nextBtn').addEventListener('click', nextStep);
+            document.getElementById('prevBtn').addEventListener('click', previousStep);
+            document.getElementById('restartBtn').addEventListener('click', restartAssessment);
+            document.getElementById('skipMeasurements').addEventListener('click', skipClinicalMeasurements);
+        });
+    </script>
+</body>
+</html>
